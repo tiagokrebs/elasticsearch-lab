@@ -1,10 +1,10 @@
 # Elastic LAB
 
-Laboratory for learning Elastick Stack and Azion's data collect and cluster administration.
+Laboratory for learning about Elastick Stack and Azion's data collect/cluster administration.
 Based on [Elastic Docs](https://www.elastic.co/guide/en/elastic-stack/7.3/installing-elastic-stack.html) and [this project](https://github.com/xeraa/elastic-docker).
 
 ## The Elastic Stack
-The ELK (Elastic Stack) is a group of apps created by Elastic.co who work each other in order to collect, transform, store and beautifully show data. Azion uses all tools of the this stack.
+The ELK (Elastic Stack) is a group of apps created by Elastic.co that work each other in order to collect, transform, store and beautifully show data. Azion uses all tools of the this stack.
 
 - Beats/Logstash: collects and trasform data (ETL). Some times Azion uses other collect tools (like Timber) to work with Logstash instead of Elastic Beats.
 - Elasticksearch: storage the data in form of indexes and shards of indexes.
