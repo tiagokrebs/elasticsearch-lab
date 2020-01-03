@@ -1,0 +1,98 @@
+version: '2.2'
+services:
+  elc:
+    image: docker.elastic.co/elasticsearch/elasticsearch:$ELASTIC_VERSION
+    container_name: elc
+    environment:
+      - node.name=elc
+      - node.master=true
+      - node.data=false
+      - discovery.seed_hosts=elc
+      - network.host=elc
+      - cluster.initial_master_nodes=elc
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elcdata:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - elknet
+  elh:
+    image: docker.elastic.co/elasticsearch/elasticsearch:$ELASTIC_VERSION
+    container_name: elh
+    environment:
+      - node.name=elh
+      - node.master=false
+      - node.data=true
+      - node.attr.box_type=hot
+      - network.host=elh
+      - discovery.seed_hosts=elc
+      - cluster.initial_master_nodes=elc
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elhdata:/usr/share/elasticsearch/data
+    networks:
+      - elknet
+  elw:
+    image: docker.elastic.co/elasticsearch/elasticsearch:$ELASTIC_VERSION
+    container_name: elw
+    environment:
+      - node.name=elw
+      - node.master=false
+      - node.data=true
+      - node.attr.box_type=warm
+      - network.host=elw
+      - discovery.seed_hosts=elc
+      - cluster.initial_master_nodes=elc
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elwdata:/usr/share/elasticsearch/data
+    networks:
+      - elknet
+  kbn:
+    image: docker.elastic.co/kibana/kibana:$ELASTIC_VERSION
+    container_name: kbn
+    environment:
+      SERVER_NAME: kibana.local
+      ELASTICSEARCH_HOSTS: http://elc:9200
+    ports:
+      - 5601:5601
+    networks:
+      - elknet
+  lsh:
+    image: docker.elastic.co/logstash/logstash:$ELASTIC_VERSION
+    container_name: lsh
+    environment:
+      SERVER_NAME: logstash.local
+      ELASTICSEARCH_HOSTS: http://elc:9200
+    networks:
+      - elknet
+
+volumes:
+  elcdata:
+    driver: local
+  elhdata:
+    driver: local
+  elwdata:
+    driver: local
+
+networks:
+  elknet:
