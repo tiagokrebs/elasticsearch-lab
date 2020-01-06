@@ -108,12 +108,48 @@ services:
       test: ["CMD", "curl", "-s", "-f", "http://localhost:5601/"]
       retries: 6
 
+  # Nginx container for data generation
+  nginx:
+    container_name: nginx
+    hostname: nginx
+    build: ${PWD}/nginx
+    networks:
+      - elknet
+    ports:
+      - 80:80
+    command: nginx -g 'daemon off;'
+    volumes:
+      - ./logs/nginx/:/var/log/nginx/
+
+  # Filebeat
+  filebeat:
+    container_name: filebeat
+    hostname: filebeat
+    user: root # to read docker socket
+    image: "docker.elastic.co/beats/filebeat:${ELASTIC_VERSION}"
+    volumes:
+      - ./beats/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./beats/filebeat/prospectors.d/:/usr/share/filebeat/prospectors.d/.
+      - ./logs/nginx/:/var/log/nginx/
+      - /private/var/log/:/var/log/host/:ro # docker vm
+      - /var/lib/docker/containers:/hostfs/var/lib/docker/containers # docker logs
+      - filebeatdata:/usr/share/filebeat/data/
+      - /var/run/docker.sock:/var/run/docker.sock # docker vm
+    networks:
+      - elknet
+    command: filebeat -e -strict.perms=false
+    restart: on-failure
+    depends_on:
+      coordinator: { condition: service_healthy }
+
   # This container ensures Elastic Stack health and configuration
   init-stack:
     container_name: init-stack
     image: docker.elastic.co/beats/metricbeat:${ELASTIC_VERSION}
     volumes:
       - ./init/init-stack.sh:/usr/local/bin/init-stack.sh:ro
+      - ./init/pipelines/:/usr/local/bin/pipelines/
+      - ./init/templates/:/usr/local/bin/templates/']
     command: ['/bin/bash', '-c', 'cat /usr/local/bin/init-stack.sh | tr -d "\r" | bash']
     networks:
       - elknet
@@ -128,6 +164,8 @@ volumes:
   hotdata:
     driver: local
   warmdata:
+    driver: local
+  filebeatdata:
     driver: local
 
 networks:

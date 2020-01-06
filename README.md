@@ -1,4 +1,4 @@
-# Elastic LAB
+# Elastic Lab
 
 Laboratory for learning about Elastick Stack and Azion's data collect/cluster administration.
 Based on [Elastic Docs](https://www.elastic.co/guide/en/elastic-stack/7.3/installing-elastic-stack.html) and [this project](https://github.com/xeraa/elastic-docker).
@@ -12,16 +12,27 @@ The ELK (Elastic Stack) is a group of apps created by Elastic.co that work each 
 
 To learn more about ELK [see here](https://www.elastic.co/pt/what-is/elk-stack).
 
-# Single Elasticsearch + Kibana
-Docker needs at least 3Gb memory.
-```console
+## The Lab
+Docker needs at least 3Gb memory for these enviroments.
+
+```bash
+# to start an enviroment up
 docker-compose up
-docker-compose --detach
-docker-compose down
-docker-compose down -v  # erase volumes
+
+# detached mode (hiden logs)
+docker-compose up -d
+
+# get running containers and health status
 docker ps -a
-docker logs <container>
+
+# follow logs (if detached)
+docker logs <container name> -f
+
+# to stop an aviroment
+docker-compose down
+
+# stop and remove local volumes
+docker-compose down -v
 ```
 
-# Elastic Stack
-Loading...
+Enter on `single-node` or `elatic-stack` folders for more details.

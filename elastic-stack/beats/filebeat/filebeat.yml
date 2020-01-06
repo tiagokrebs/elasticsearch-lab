@@ -1,7 +1,7 @@
 filebeat.registry.path: /usr/share/filebeat/data/registry
 
 filebeat.config.inputs:
-  path: ${path.config}/prospectors/*.yml
+  path: ${path.config}/prospectors.d/*.yml
   reload.enabled: false
 
 filebeat.modules:
@@ -19,10 +19,10 @@ filebeat.modules:
 monitoring.enabled: true
 
 output.elasticsearch:
-  hosts: ["elc:9200"]
+  hosts: ["coordinator:9200"]
 
 logging.to_files: false
 
 setup:
-  kibana.host: "kbn:5601"
+  kibana.host: "kibana:5601"
   dashboards.enabled: true
