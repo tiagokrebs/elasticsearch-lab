@@ -35,4 +35,13 @@ docker-compose down
 docker-compose down -v
 ```
 
-Enter on `single-node` or `elatic-stack` folders for more details.
+Go to `single-node` or `elatic-stack` folders for more details.
+
+## To do
+- Elastic Stack
+    - Nginx with filebeat collect
+    - Nginx with Azion Timber collect
+    - Add more Beats tools (auditbeat, heartbeat, metricbeat, packetbeat)
+- App Search
+- Machine Learning
+- Elasticsearch Upgrade
