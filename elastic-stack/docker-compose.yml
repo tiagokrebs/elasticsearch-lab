@@ -25,7 +25,7 @@ services:
     ports: 
       - 9200:9200
     healthcheck:
-      test: ["CMD", "curl","-s" ,"-f", "http://localhost:9200/_cat/health"]
+      test: ["CMD", "curl","-s" ,"-f", "http://coordinator:9200/_cat/health"]
     networks:
       - elknet
 
@@ -54,7 +54,7 @@ services:
     ports: 
       - 9201:9200
     healthcheck:
-      test: ["CMD", "curl","-s" ,"-f", "http://localhost:9201/_cat/health"]
+      test: ["CMD", "curl","-s" ,"-f", "http://hot-node:9200/_cat/health"]
     networks:
       - elknet
 
@@ -83,7 +83,7 @@ services:
     ports: 
       - 9202:9200
     healthcheck:
-      test: ["CMD", "curl","-s" ,"-f", "http://localhost:9202/_cat/health"]
+      test: ["CMD", "curl","-s" ,"-f", "http://warm-node:9200/_cat/health"]
     networks:
       - elknet
 
@@ -93,7 +93,7 @@ services:
     hostname: kibana
     image: "docker.elastic.co/kibana/kibana:${ELASTIC_VERSION}"
     environment:
-      SERVER_NAME: kibana.local
+      SERVER_NAME: kibana
       ELASTICSEARCH_HOSTS: http://coordinator:9200
     volumes:
       - ./kibana/kibana.yml:/usr/share/kibana/kibana.yml
@@ -101,12 +101,26 @@ services:
       - 5601:5601
     networks:
       - elknet
-    # depends_on:
-    #   coordinator: { condition: service_healthy }
+    depends_on:
+      coordinator: { condition: service_healthy }
     restart: on-failure
     healthcheck:
       test: ["CMD", "curl", "-s", "-f", "http://localhost:5601/"]
       retries: 6
+
+  # This container ensures Elastic Stack health and configuration
+  init-stack:
+    container_name: init-stack
+    image: docker.elastic.co/beats/metricbeat:${ELASTIC_VERSION}
+    volumes:
+      - ./init/init-stack.sh:/usr/local/bin/init-stack.sh:ro
+    command: ['/bin/bash', '-c', 'cat /usr/local/bin/init-stack.sh | tr -d "\r" | bash']
+    networks:
+      - elknet
+    environment: ['ELASTIC_VERSION=${ELASTIC_VERSION}']
+    depends_on:
+      - coordinator
+      - kibana
 
 volumes:
   coorddata:
