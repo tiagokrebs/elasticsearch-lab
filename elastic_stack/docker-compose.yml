@@ -18,7 +18,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
+      - ./elasticsearch/coordinator/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
       - coorddata:/usr/share/elasticsearch/data
     ports: 
       - 9200:9200
@@ -45,7 +45,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./elasticsearch/elasticsearch-hot.yml:/usr/share/elasticsearch/elasticsearch.yml
+      - ./elasticsearch/hot-node/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
       - hotdata:/usr/share/elasticsearch/data
     ports: 
       - 9201:9200
@@ -53,11 +53,40 @@ services:
       test: ["CMD", "curl","-s" ,"-f", "http://localhost:9201/_cat/health"]
     networks:
       - elknet
+  warm-node:
+    container_name: warm-node
+    hostname: warm-node
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    environment:
+      - node.master=false
+      - node.data=true
+      - node.attr.box_type=warm
+      - network.host=warm-node
+      - discovery.seed_hosts=coordinator
+      - cluster.initial_master_nodes=coordinator
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
+    mem_limit: ${ES_MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elasticsearch/warm-node/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
+      - warmdata:/usr/share/elasticsearch/data
+    ports: 
+      - 9202:9200
+    healthcheck:
+      test: ["CMD", "curl","-s" ,"-f", "http://localhost:9202/_cat/health"]
+    networks:
+      - elknet
 
 volumes:
   coorddata:
     driver: local
   hotdata:
+    driver: local
+  warmdata:
     driver: local
 
 networks:

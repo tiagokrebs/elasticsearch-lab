@@ -1,8 +1,8 @@
 version: '2.2'
 services:
-  elh:
+  elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:$ELASTIC_VERSION
-    container_name: elh
+    container_name: elasticsearch
     environment:
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
@@ -13,19 +13,19 @@ services:
         hard: -1
     mem_limit: 1g
     volumes:
-      - elhdata:/usr/share/elasticsearch/data
+      - esdata:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
-  kbn:
+  kibana:
     image: docker.elastic.co/kibana/kibana:$ELASTIC_VERSION
-    container_name: kbn
+    container_name: kibana
     environment:
-      ELASTICSEARCH_HOSTS: http://elh:9200
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     links:
-      - elh
+      - elasticsearch
     ports:
       - 5601:5601
 
 volumes:
-  elhdata:
+  esdata:
     driver: local

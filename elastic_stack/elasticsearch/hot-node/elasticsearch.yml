@@ -1,0 +1,5 @@
+cluster.name: docker-cluster
+node.name: hot-node
+path.data: /usr/share/elasticsearch/data
+http.port: 9200
+xpack.monitoring.enabled: true
