@@ -1,12 +1,15 @@
 version: '2.2'
 services:
-  elc:
-    container_name: elc
-    hostname: elc
-    image: "docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}"
+  coordinator:
+    container_name: coordinator
+    hostname: coordinator
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
     environment:
-      - http.host=0.0.0.0
-      - transport.host=127.0.0.1
+      - node.master=true
+      - node.data=false
+      - discovery.seed_hosts=coordinator
+      - network.host=coordinator
+      - cluster.initial_master_nodes=coordinator
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
     mem_limit: ${ES_MEM_LIMIT}
@@ -16,13 +19,46 @@ services:
         hard: -1
     volumes:
       - ./elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
-      - elcdata:/usr/share/elasticsearch/data
-    ports: ['9200:9200']
+      - coorddata:/usr/share/elasticsearch/data
+    ports: 
+      - 9200:9200
     healthcheck:
       test: ["CMD", "curl","-s" ,"-f", "http://localhost:9200/_cat/health"]
-    networks: ['stack']
+    networks:
+      - elknet
+  hot-node:
+    container_name: hot-node
+    hostname: hot-node
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    environment:
+      - node.master=false
+      - node.data=true
+      - node.attr.box_type=hot
+      - network.host=hot-node
+      - discovery.seed_hosts=coordinator
+      - cluster.initial_master_nodes=coordinator
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
+    mem_limit: ${ES_MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elasticsearch/elasticsearch-hot.yml:/usr/share/elasticsearch/elasticsearch.yml
+      - hotdata:/usr/share/elasticsearch/data
+    ports: 
+      - 9201:9200
+    healthcheck:
+      test: ["CMD", "curl","-s" ,"-f", "http://localhost:9201/_cat/health"]
+    networks:
+      - elknet
 
 volumes:
-  elcdata:
+  coorddata:
     driver: local
-networks: {stack: {}}
+  hotdata:
+    driver: local
+
+networks:
+  elknet:
