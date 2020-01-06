@@ -40,7 +40,7 @@ Go to `single-node` or `elatic-stack` folders for more details.
 ## To do
 - Elastic Stack
     - Nginx with filebeat collect
-    - Nginx with Azion Timber collect
+    - Nginx with Azion Timber and Logstash
     - Add more Beats tools (auditbeat, heartbeat, metricbeat, packetbeat)
 - App Search
 - Machine Learning
