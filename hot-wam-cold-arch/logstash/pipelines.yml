@@ -1,0 +1,3 @@
+- pipeline.id: all
+  path.config: "/etc/logstash/conf.d/*.conf"
+  pipeline.workers: 1

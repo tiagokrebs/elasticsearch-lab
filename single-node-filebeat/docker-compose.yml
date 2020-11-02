@@ -1,0 +1,70 @@
+version: '2.2'
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:$ELASTIC_VERSION
+    container_name: elasticsearch
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 1g
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - elknet
+    ports:
+      - 9200:9200
+  kibana:
+    image: docker.elastic.co/kibana/kibana:$ELASTIC_VERSION
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    networks:
+      - elknet
+    ports:
+      - 5601:5601
+  nginx:
+    container_name: nginx
+    hostname: nginx
+    build: ./nginx
+    ports:
+      - 80:80
+    command: nginx -g 'daemon off;'
+    volumes:
+      - ./logs/nginx/:/var/log/nginx/
+    networks:
+      - elknet
+  filebeat:
+    container_name: filebeat
+    hostname: filebeat
+    image: "docker.elastic.co/beats/filebeat:${ELASTIC_VERSION}"
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./logs/nginx/:/var/log/nginx/
+      - filebeatdata:/usr/share/filebeat/data/
+    networks:
+      - elknet
+    command: filebeat -e -strict.perms=false
+    restart: on-failure
+  fake-reqs:
+    container_name: fake-reqs
+    hostname: fake-reqs
+    build: ./fake-reqs
+    volumes:
+      - ./fake-reqs/fake-requests.sh:/usr/local/bin/fake-requests.sh:ro
+    networks:
+      - elknet
+    command: ['/bin/bash', '-c', 'cat /usr/local/bin/fake-requests.sh | tr -d "\r" | bash']
+
+volumes:
+  esdata:
+    driver: local
+  filebeatdata:
+    driver: local
+
+networks:
+  elknet:

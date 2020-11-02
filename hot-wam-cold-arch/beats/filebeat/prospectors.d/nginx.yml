@@ -1,0 +1,10 @@
+- type: log
+  enabled: true
+  paths:
+    - /var/log/nginx/error.log*
+  tags: ["error-log"]
+- type: log
+  enabled: true
+  paths:
+    - /var/log/nginx/access.log*
+  tags: ["access-log"]

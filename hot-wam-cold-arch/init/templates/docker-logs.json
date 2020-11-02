@@ -1,0 +1,27 @@
+{
+  "order" : 10,
+  "index_patterns" : [
+      "docker-logs-*"
+  ],
+  "settings" : {
+      "index" : {
+      "lifecycle" : {
+          "name" : "docker-logs",
+          "rollover_alias" : "docker-logs"
+      },
+      "routing" : {
+          "allocation" : {
+          "require" : {
+              "box_type" : "hot"
+          },
+          "total_shards_per_node" : "1"
+          }
+      },
+      "refresh_interval" : "1m",
+      "number_of_shards" : "1",
+      "number_of_replicas" : "0"
+      }
+  },
+  "mappings" : { },
+  "aliases" : { }
+}

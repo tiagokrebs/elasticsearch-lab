@@ -1,0 +1,88 @@
+version: '2.2'
+services:
+
+  # Coordinator node
+  coordinator:
+    container_name: coordinator
+    hostname: coordinator
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    environment:
+      - node.master=true
+      - node.data=false
+      - discovery.seed_hosts=coordinator
+      - network.host=coordinator
+      - cluster.initial_master_nodes=coordinator
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
+      - "ELASTIC_PASSWORD=elastic"
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.keystore.path=/usr/share/elasticsearch/config/certificates/coordinator.p12
+      - xpack.security.transport.ssl.truststore.path=/usr/share/elasticsearch/config/certificates/coordinator.p12
+      - xpack.security.transport.ssl.keystore.password=TjzDjE2Ps1NTkTJ4
+      - xpack.security.transport.ssl.truststore.password=TjzDjE2Ps1NTkTJ4
+      - xpack.security.enabled=true
+    mem_limit: ${ES_MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elasticsearch/coordinator/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
+      - ./certs/coordinator.p12:/usr/share/elasticsearch/config/certificates/coordinator.p12
+      - ./certs/elastic-stack-ca.p12:/usr/share/elasticsearch/config/certificates/elastic-stack-ca.p12
+      - coorddata:/usr/share/elasticsearch/data
+    ports: 
+      - 9200:9200
+    healthcheck:
+      test: ["CMD", "curl","-s" ,"-f", "http://coordinator:9200/_cat/health"]
+    networks:
+      - elknet
+
+  # Hot node
+  hot-node:
+    container_name: hot-node
+    hostname: hot-node
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    environment:
+      - node.master=false
+      - node.data=true
+      - node.attr.box_type=hot
+      - network.host=hot-node
+      - discovery.seed_hosts=coordinator
+      - cluster.initial_master_nodes=coordinator
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
+      - "ELASTIC_PASSWORD=elastic"
+      - xpack.security.enabled=true
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.keystore.path=/usr/share/elasticsearch/config/certificates/hot-node.p12
+      - xpack.security.transport.ssl.truststore.path=/usr/share/elasticsearch/config/certificates/hot-node.p12
+      - xpack.security.transport.ssl.keystore.password=TjzDjE2Ps1NTkTJ4
+      - xpack.security.transport.ssl.truststore.password=TjzDjE2Ps1NTkTJ4
+    mem_limit: ${ES_MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elasticsearch/hot-node/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
+      - ./certs/hot-node.p12:/usr/share/elasticsearch/config/certificates/hot-node.p12
+      - ./certs/elastic-stack-ca.p12:/usr/share/elasticsearch/config/certificates/elastic-stack-ca.p12
+      - hotdata:/usr/share/elasticsearch/data
+    ports: 
+      - 9201:9200
+    healthcheck:
+      test: ["CMD", "curl","-s" ,"-f", "http://hot-node:9200/_cat/health"]
+    networks:
+      - elknet
+
+volumes:
+  coorddata:
+    driver: local
+  hotdata:
+    driver: local
+
+networks:
+  elknet:

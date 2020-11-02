@@ -1,0 +1,2 @@
+server.port: 127.0.0.1:5601
+xpack.monitoring.enabled: true

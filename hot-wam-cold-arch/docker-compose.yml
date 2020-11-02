@@ -1,0 +1,202 @@
+version: '2.2'
+services:
+
+  # Coordinator node (elc)
+  coordinator:
+    container_name: coordinator
+    hostname: coordinator
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    environment:
+      - node.master=true
+      - node.data=false
+      - discovery.seed_hosts=coordinator
+      - network.host=coordinator
+      - cluster.initial_master_nodes=coordinator
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
+    mem_limit: ${ES_MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elasticsearch/coordinator/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
+      - coorddata:/usr/share/elasticsearch/data
+    ports: 
+      - 9200:9200
+    healthcheck:
+      test: ["CMD", "curl","-s" ,"-f", "http://coordinator:9200/_cat/health"]
+    networks:
+      - elknet
+
+  # Hot node (elh)
+  hot-node:
+    container_name: hot-node
+    hostname: hot-node
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    environment:
+      - node.master=false
+      - node.data=true
+      - node.attr.box_type=hot
+      - network.host=hot-node
+      - discovery.seed_hosts=coordinator
+      - cluster.initial_master_nodes=coordinator
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
+    mem_limit: ${ES_MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elasticsearch/hot-node/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
+      - hotdata:/usr/share/elasticsearch/data
+    ports: 
+      - 9201:9200
+    healthcheck:
+      test: ["CMD", "curl","-s" ,"-f", "http://hot-node:9200/_cat/health"]
+    networks:
+      - elknet
+
+  # Warm node (elh)
+  warm-node:
+    container_name: warm-node
+    hostname: warm-node
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    environment:
+      - node.master=false
+      - node.data=true
+      - node.attr.box_type=warm
+      - network.host=warm-node
+      - discovery.seed_hosts=coordinator
+      - cluster.initial_master_nodes=coordinator
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
+    mem_limit: ${ES_MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elasticsearch/warm-node/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml
+      - warmdata:/usr/share/elasticsearch/data
+    ports: 
+      - 9202:9200
+    healthcheck:
+      test: ["CMD", "curl","-s" ,"-f", "http://warm-node:9200/_cat/health"]
+    networks:
+      - elknet
+
+  # Kibana (kbn)
+  kibana:
+    container_name: kibana
+    hostname: kibana
+    image: "docker.elastic.co/kibana/kibana:${ELASTIC_VERSION}"
+    environment:
+      SERVER_NAME: kibana
+      ELASTICSEARCH_HOSTS: http://coordinator:9200
+    volumes:
+      - ./kibana/kibana.yml:/usr/share/kibana/kibana.yml
+    ports:
+      - 5601:5601
+    networks:
+      - elknet
+    depends_on:
+      coordinator: { condition: service_healthy }
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-f", "http://localhost:5601/"]
+      retries: 6
+
+  # Nginx container for data generation
+  nginx:
+    container_name: nginx
+    hostname: nginx
+    build: ./nginx
+    ports:
+      - 80:80
+    command: nginx -g 'daemon off;'
+    volumes:
+      - ./logs/nginx/:/var/log/nginx/
+    networks:
+      - elknet
+
+  # Fake HTTP requests generator
+  fake-reqs:
+    container_name: fake-reqs
+    hostname: fake-reqs
+    build: ./fake-reqs
+    volumes:
+      - ./fake-reqs/fake-requests.sh:/usr/local/bin/fake-requests.sh:ro
+    networks:
+      - elknet
+    command: ['/bin/bash', '-c', 'cat /usr/local/bin/fake-requests.sh | tr -d "\r" | bash']
+
+  # Filebeat
+  filebeat:
+    container_name: filebeat
+    hostname: filebeat
+    user: root # to read docker socket
+    image: "docker.elastic.co/beats/filebeat:${ELASTIC_VERSION}"
+    volumes:
+      - ./beats/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./beats/filebeat/prospectors.d/:/usr/share/filebeat/prospectors.d/.
+      - ./logs/nginx/:/var/log/nginx/
+      - /private/var/log/:/var/log/host/:ro # docker vm
+      - /var/lib/docker/containers:/hostfs/var/lib/docker/containers # docker logs
+      - filebeatdata:/usr/share/filebeat/data/
+      - /var/run/docker.sock:/var/run/docker.sock # docker vm
+    networks:
+      - elknet
+    command: filebeat -e -strict.perms=false
+    restart: on-failure
+    depends_on:
+      coordinator: { condition: service_healthy }
+
+  # Logstash
+  logstash:
+    container_name: logstash
+    hostname: logstash
+    image: "docker.elastic.co/logstash/logstash:${ELASTIC_VERSION}"
+    environment:
+      - "LS_JAVA_OPTS=-Xms${ES_JVM_HEAP} -Xmx${ES_JVM_HEAP}"
+    volumes:
+      - ./logstash/:/etc/logstash/
+    ports:
+      - 9203:9200
+      - 5056:5056
+    networks:
+      - elknet
+    command: logstash --path.settings /etc/logstash
+    restart: on-failure
+    depends_on:
+      coordinator: { condition: service_healthy }
+
+  # This container ensures Elastic Stack health and configuration
+  init-stack:
+    container_name: init-stack
+    build: ./init
+    volumes:
+      - ./init/init-stack.sh:/usr/local/bin/init-stack.sh:ro
+      - ./init/pipelines/:/usr/local/bin/pipelines/
+      - ./init/templates/:/usr/local/bin/templates/
+    command: ['/bin/bash', '-c', 'cat /usr/local/bin/init-stack.sh | tr -d "\r" | bash']
+    networks:
+      - elknet
+    environment: ['ELASTIC_VERSION=${ELASTIC_VERSION}']
+    depends_on:
+      - coordinator
+      - kibana
+
+volumes:
+  coorddata:
+    driver: local
+  hotdata:
+    driver: local
+  warmdata:
+    driver: local
+  filebeatdata:
+    driver: local
+
+networks:
+  elknet:

@@ -1,0 +1,35 @@
+filebeat.registry.path: /usr/share/filebeat/data/registry
+monitoring:
+  enabled: true
+  elasticsearch:
+    username: beats_system
+    password: somepassword
+    hosts: ["coordinator:9200"]
+
+filebeat.config.inputs:
+  path: ${path.config}/prospectors.d/*.yml
+  reload.enabled: false
+
+# filebeat.modules:
+  # # OS
+  # - module: system
+  #   syslog:
+  #     var.paths: ["/var/log/host/system.log*"]
+  # # Nginx
+  # - module: nginx
+  #   access:
+  #     var.paths: ["/var/log/nginx/access.log*"]
+  #   error:
+  #     var.paths: ["/var/log/nginx/error.log*"]
+
+# output.elasticsearch:
+#   hosts: ["coordinator:9200"]
+
+output.logstash:
+  hosts: ["logstash:5056"]
+
+logging.to_files: false
+
+setup:
+  kibana.host: "kibana:5601"
+  # dashboards.enabled: true
